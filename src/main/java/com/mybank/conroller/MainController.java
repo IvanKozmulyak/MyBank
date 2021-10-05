@@ -1,11 +1,14 @@
 package com.mybank.conroller;
 
+import com.mybank.DTO.BalanceDTO;
 import com.mybank.entity.Deposit;
 import com.mybank.entity.User;
 import com.mybank.service.DepositService;
 import com.mybank.service.DepositTypeService;
 import com.mybank.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,37 +31,38 @@ public class MainController {
 
     @RequestMapping("create-account")
     @PostMapping
-    public Long createAccount(@RequestParam String name) {
-        return userService.saveOrUpdate(User.builder().name(name).balance(0.).build()).getId();
+    public ResponseEntity<Long> createAccount(@RequestParam String name) {
+        return ResponseEntity.ok().body(userService.saveOrUpdate(User.builder().name(name).balance(0.).build()).getId());
     }
 
     @RequestMapping("get-balance")
     @GetMapping
-    public Double getBalance(@RequestParam Long id) {
-        return userService.findById(id).getBalance();
+    public ResponseEntity<BalanceDTO> getBalance(@RequestParam Long id) {
+        return ResponseEntity.ok().body(BalanceDTO.builder().id(id).amount(userService.findById(id).getBalance()).build());
     }
 
     @RequestMapping("credit")
     @PostMapping
-    public Double credit(@RequestParam Long id, @RequestParam Double amount) {
-        return userService.credit(id, amount);
+    public ResponseEntity<BalanceDTO> credit(@RequestParam Long id, @RequestParam Double amount) {
+        return ResponseEntity.ok().body(BalanceDTO.builder().id(id).amount(userService.credit(id, amount)).build());
     }
 
     @RequestMapping("create-deposit")
     @PostMapping
-    public Long createDeposit(@RequestParam Long accountId, @RequestParam Double amount, @RequestParam Long depositTypeId) {
-        return depositService.save(Deposit.builder()
+    public ResponseEntity<Long> createDeposit(@RequestParam Long accountId, @RequestParam Double amount, @RequestParam Long depositTypeId) {
+        return ResponseEntity.ok().body(depositService.save(Deposit.builder()
                 .user(userService.findById(accountId))
                 .amount(amount)
                 .depositType(depositTypeService.findById(depositTypeId))
-                .build()).getId();
+                .build()).getId());
     }
 
     @RequestMapping("trigger")
     @GetMapping
-    public void trigger() {
+    public ResponseEntity trigger() {
         List<Deposit> deposits = depositService.findAll();
         deposits.forEach(depositService::transferInterest);
         deposits.forEach(depositService::checkCountOfTriggers);
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 }
